@@ -4,6 +4,8 @@ mod config;
 mod events;
 mod grammar;
 mod llm;
+mod presets;
+mod rubric;
 mod session;
 mod state;
 mod text;

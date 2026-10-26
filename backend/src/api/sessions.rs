@@ -8,6 +8,8 @@ use uuid::Uuid;
 
 use super::{ApiResult, AppError};
 use crate::events::Paragraph;
+use crate::presets::{self, Presets};
+use crate::rubric::Rubric;
 use crate::session::{Session, SessionSnapshot, SessionSummary};
 use crate::state::Shared;
 
@@ -30,7 +32,8 @@ pub struct Created {
     session_id: String,
 }
 
-/// Multipart: `essay` (.docx) and `rubric` (.md).
+/// Multipart: the essay as an uploaded `essay` (.docx) or an `essay_preset` id, and the rubric as an
+/// uploaded `rubric` (.json) or a `rubric_preset` id.
 pub async fn create(State(st): State<Shared>, mut mp: Multipart) -> ApiResult<Json<Created>> {
     let (mut essay, mut rubric) = (None, None);
     while let Some(field) = mp.next_field().await.map_err(|e| AppError::bad_request(e.to_string()))? {
@@ -38,33 +41,48 @@ pub async fn create(State(st): State<Shared>, mut mp: Multipart) -> ApiResult<Js
         let file_name = field.file_name().unwrap_or_default().to_string();
         let bytes = field.bytes().await.map_err(|e| AppError::bad_request(e.to_string()))?;
         match name.as_str() {
-            "essay" => essay = Some((file_name, bytes)),
-            "rubric" => rubric = Some((file_name, bytes)),
+            "essay" => essay = Some((file_name, bytes.to_vec())),
+            "rubric" => rubric = Some((file_name, bytes.to_vec())),
+            "essay_preset" | "rubric_preset" => {
+                let id = String::from_utf8_lossy(&bytes).trim().to_string();
+                let kind = if name == "essay_preset" { "essays" } else { "rubrics" };
+                let data =
+                    presets::read(kind, &id).ok_or_else(|| AppError::bad_request(format!("unknown example '{id}'")))?;
+                if kind == "essays" {
+                    essay = Some((id, data));
+                } else {
+                    rubric = Some((id, data));
+                }
+            }
             _ => {}
         }
     }
-    let (essay_name, docx) = essay.ok_or_else(|| AppError::bad_request("missing 'essay' file"))?;
-    let (rubric_name, rubric_bytes) = rubric.ok_or_else(|| AppError::bad_request("missing 'rubric' file"))?;
+    let (essay_name, docx) = essay.ok_or_else(|| AppError::bad_request("choose or upload an essay"))?;
+    let (rubric_name, rubric_bytes) = rubric.ok_or_else(|| AppError::bad_request("choose or upload a rubric"))?;
     // .docx is a zip container.
     if !docx.starts_with(b"PK") {
         return Err(AppError::bad_request("the essay must be a .docx file"));
     }
-    let rubric_md = String::from_utf8(rubric_bytes.to_vec())
-        .map_err(|_| AppError::bad_request("the rubric must be a UTF-8 Markdown file"))?;
-    if rubric_md.trim().is_empty() {
-        return Err(AppError::bad_request("the rubric is empty"));
-    }
+    let rubric = Rubric::parse(&rubric_bytes).map_err(AppError::bad_request)?;
+    // Prefer the document's own title over its file name.
+    let essay_name = presets::docx_title(&docx).unwrap_or(essay_name);
     let session = Session {
         id: Uuid::new_v4(),
         created_at: chrono::Utc::now().to_rfc3339(),
         essay_name,
         rubric_name,
-        rubric_md,
+        rubric_md: rubric.to_text(),
+        criteria: rubric.criteria_list(),
+        rubric: Some(rubric),
         ..Default::default()
     };
     let id = session.id;
     st.store.create(session, &docx).await?;
     Ok(Json(Created { session_id: id.to_string() }))
+}
+
+pub async fn presets_list() -> Json<Presets> {
+    Json(presets::list())
 }
 
 pub async fn get(State(st): State<Shared>, Path(id): Path<String>) -> ApiResult<Json<SessionSnapshot>> {

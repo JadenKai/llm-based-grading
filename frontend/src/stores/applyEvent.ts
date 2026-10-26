@@ -4,6 +4,7 @@ import type { Assessment } from "../api/gen/Assessment";
 import type { ModelRef } from "../api/gen/ModelRef";
 import type { Paragraph } from "../api/gen/Paragraph";
 import type { Proposal } from "../api/gen/Proposal";
+import type { Rubric } from "../api/gen/Rubric";
 import type { RunKind } from "../api/gen/RunKind";
 import type { SessionSnapshot } from "../api/gen/SessionSnapshot";
 import type { StepKind } from "../api/gen/StepKind";
@@ -33,7 +34,8 @@ export type Block =
   | { type: "step"; stepId: string }
   | { type: "text"; messageId: string; text: string }
   | { type: "proposals"; ids: string[] }
-  | { type: "error"; message: string; recoverable: boolean };
+  | { type: "error"; message: string; recoverable: boolean }
+  | { type: "verdict"; assessment: Assessment };
 
 export type ChatItem =
   | { kind: "user"; id: string; text: string }
@@ -52,6 +54,7 @@ export interface SessionData {
   essayName: string;
   rubricName: string;
   rubricMd: string;
+  rubric: Rubric | null;
   paragraphs: Paragraph[];
   annotations: Annotation[];
   /** Ordered by creation. */
@@ -78,6 +81,7 @@ export function sessionFromSnapshot(s: SessionSnapshot): SessionData {
     essayName: s.essay_name,
     rubricName: s.rubric_name,
     rubricMd: s.rubric_md,
+    rubric: s.rubric,
     paragraphs: s.paragraphs,
     annotations: s.annotations,
     proposals: s.proposals,
@@ -236,6 +240,8 @@ export function applyEvent(d: AppData, env: Envelope, opts: { chatOnly?: boolean
       break;
     }
     case "assessment": {
+      // The chat shows the verdict as a widget (kept with the item, so replay works too).
+      if (env.original) item?.blocks.push({ type: "verdict", assessment: env.assessment });
       if (s && env.original && !s.assessment) {
         s.assessment = env.assessment;
         s.thesis = env.assessment.thesis;

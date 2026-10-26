@@ -1,0 +1,11 @@
+{
+  "title": "Persuasive Essay Rubric",
+  "criteria": [
+    { "name": "Thesis & Focus", "points": 5, "description": "A clear, arguable thesis is stated early and every paragraph serves it." },
+    { "name": "Evidence & Support", "points": 5, "description": "Claims are backed by specific, accurate, relevant evidence." },
+    { "name": "Organization", "points": 4, "description": "Logical paragraph order, clear topic sentences and transitions." },
+    { "name": "Counterargument", "points": 3, "description": "Anticipates and rebuts a serious opposing view." },
+    { "name": "Conventions", "points": 3, "description": "Grammar, spelling and punctuation are essentially error-free." }
+  ],
+  "notes": ["Deduct for off-topic content and factual inaccuracies."]
+}

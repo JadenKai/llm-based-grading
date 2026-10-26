@@ -11,6 +11,7 @@ const session = (): AppData["session"] => ({
   essayName: "e.docx",
   rubricName: "r.md",
   rubricMd: "# R",
+  rubric: null,
   paragraphs: [{ key: "P1", index: 0, text: "Hello world" }],
   annotations: [],
   proposals: [],

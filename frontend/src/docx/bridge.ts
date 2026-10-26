@@ -8,6 +8,7 @@ import type { Anchor } from "../api/gen/Anchor";
 import type { Paragraph } from "../api/gen/Paragraph";
 import type { Proposal } from "../api/gen/Proposal";
 import { bucket, scoreColor } from "./colors";
+import { type Located, regionText, toEditorOffset } from "./previews";
 
 export interface BlockRef {
   key: string;
@@ -62,7 +63,8 @@ export function extractParagraphs(editor: Editor): Extracted {
 
 const SCORE_SETS = Array.from({ length: 11 }, (_, b) => `score-${b}`);
 
-function anchorRange(block: BlockRef, anchor: Anchor | null, annId: string): Range | null {
+/** Range for an annotation, in editor coordinates (shifted past any previewed insertions). */
+function anchorRange(block: BlockRef, anchor: Anchor | null, annId: string, located?: Located[]): Range | null {
   if (!block.blockId) return null;
   if (!anchor) {
     return { blockId: block.blockId, start: 0, length: block.text.length, annId, para: block.key };
@@ -70,7 +72,7 @@ function anchorRange(block: BlockRef, anchor: Anchor | null, annId: string): Ran
   if (anchor.length === 0) return null;
   return {
     blockId: block.blockId,
-    start: anchor.start,
+    start: toEditorOffset(located, anchor.start),
     length: anchor.length,
     expectedText: anchor.quote,
     annId,
@@ -82,16 +84,19 @@ export interface HighlightState {
   annotations: Annotation[];
   proposals: Proposal[];
   showScores: boolean;
-  /** Paint comment, grammar and proposal marks (otherwise only paragraph scores and the focus). */
+  /** Paint comment and proposal marks (otherwise only paragraph scores, fixes and the focus). */
   showDetails: boolean;
   focusAnnotation: string | null;
+  /** Inline fix previews per paragraph (see previews.ts). */
+  previews: Map<string, Located[]>;
 }
 
 /** Repaint every highlight set from scratch. Cheap: a few dozen ranges. */
 export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st: HighlightState) {
   const scoreRanges: Range[][] = SCORE_SETS.map(() => []);
   const comments: Range[] = [];
-  const harperEdits: Range[] = [];
+  const fixes: Range[] = [];
+  const unpreviewedFixes: Range[] = [];
   const agentPending: Range[] = [];
   const pendingScores: Range[] = [];
   const focus: Range[] = [];
@@ -99,6 +104,7 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
   const visit = (a: Annotation, pending: boolean) => {
     const block = blocks.get(a.para);
     if (!block) return;
+    const located = st.previews.get(a.para);
     let r: Range | null = null;
     switch (a.kind) {
       case "score":
@@ -108,13 +114,22 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
         if (r && pending) pendingScores.push(r);
         break;
       case "comment":
-        r = anchorRange(block, a.anchor, a.id);
+        r = anchorRange(block, a.anchor, a.id, located);
         if (r && a.anchor) (pending ? agentPending : comments).push(r);
         break;
-      case "edit":
-        r = anchorRange(block, a.anchor, a.id);
-        if (r) (a.source === "harper" ? harperEdits : agentPending).push(r);
+      case "edit": {
+        const l = located?.find((x) => x.edit.id === a.id);
+        if (l && !l.lost && block.blockId) {
+          // The preview's own red text marks it; this transparent range only makes it hoverable/clickable.
+          const text = l.applied ? regionText(l.shape) : l.shape.quote;
+          r = { blockId: block.blockId, start: l.pos, length: text.length, expectedText: text, annId: a.id, para: a.para };
+          fixes.push(r);
+        } else {
+          r = anchorRange(block, a.anchor, a.id, located);
+          if (r) unpreviewedFixes.push(r);
+        }
         break;
+      }
     }
     if (r && st.focusAnnotation === a.id) focus.push(r);
   };
@@ -132,7 +147,9 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
   const details = (ranges: Range[]) => (st.showDetails ? ranges : []);
   SCORE_SETS.forEach((name, b) => set(name, scoreRanges[b], scoreColor(b), "grader-score", 0));
   set("comments", details(comments), "oklch(0.86 0.08 250)", "grader-comment", 3);
-  set("grammar", details(harperEdits), "oklch(0.86 0.12 20)", "grader-grammar", 4);
+  // Suggested fixes are always visible: they are the red text in the document.
+  set("fixes", fixes, "transparent", "grader-fix", 4);
+  set("grammar", unpreviewedFixes, "transparent", "grader-grammar", 4);
   set("proposals", details(agentPending), "oklch(0.86 0.1 300)", "grader-proposal", 5);
   set("pending-scores", details(pendingScores), "transparent", "grader-proposal", 2);
   // The focus mark is always shown: it only appears when the teacher picked an item.
@@ -161,16 +178,4 @@ export function annotationsAt(editor: Editor, x: number, y: number): Hit[] {
 
 export function scrollTo(editor: Editor, block: BlockRef | undefined) {
   if (block?.blockId) editor.scrollToBlock(block.blockId, { block: "center", behavior: "smooth" });
-}
-
-/** Apply an accepted edit in the document. Returns the error reason, or null on success. */
-export function applyEdit(editor: Editor, block: BlockRef, anchor: Anchor, replacement: string): string | null {
-  if (!block.blockId) return "this paragraph could not be located in the editor";
-  const matches = editor
-    .findMatches(anchor.quote, { matchCase: true })
-    .filter((m) => !m.scope && m.blockId === block.blockId);
-  if (!matches.length) return `"${anchor.quote}" is no longer in the paragraph`;
-  const best = matches.reduce((a, b) => (Math.abs(b.start - anchor.start) < Math.abs(a.start - anchor.start) ? b : a));
-  const res = editor.exec({ type: "replaceMatch", match: best, text: replacement });
-  return res.ok ? null : `${res.code}: ${res.reason}`;
 }

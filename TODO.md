@@ -1,0 +1,13 @@
+- [x] Add a default dropdown menu on the landing page
+- [x] Make the rubric use JSON instead of md
+- [x] Be able to click on the scored highlighted paragraph and see the comments. Add a tooltip hover to show brief information
+- [x] On the essay page, make the information displayed in the top margin tighter. Remove the top part that shows "Essay Grader", <essay name>, and score
+- [x] Move the tabs to the top of the page. Move the "Detracts and Advances Thesis" to the bottom of the page and make it smaller
+- [x] Move the title of the essay to the top center
+- [x] Remove the "file format insert review help" row 
+- [x] Make the grammar fixes marked in red. For isntance, if a comma is missing then add the comma and make it red, then add a Review Comment that can make the change. If the change is made, remove the coloring from the edit and add it to the essay 
+- [x] Remove the navigation bubble on the left of the essay
+- [x] Remove the emojis from the chat on the right
+- [x] All prompts should be condusive to as consice of an answer as possible
+- [x] Add a visualization widget for the final verdict of the essay
+- [x] Aim to have a minimalist and clean design for the UI

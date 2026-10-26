@@ -10,10 +10,10 @@ export function useModels() {
   return useQuery({ queryKey: ["models"], queryFn: api.models, staleTime: 60_000 });
 }
 
-const KIND_ICON: Record<ProviderModels["kind"], string> = {
-  ollama_local: "💻",
-  ollama_cloud: "☁️",
-  openai_compat: "🔌",
+const KIND_LABEL: Record<ProviderModels["kind"], string> = {
+  ollama_local: "Local",
+  ollama_cloud: "Cloud",
+  openai_compat: "API",
 };
 
 /** Pick a sensible model when none is chosen or the chosen one disappeared. */
@@ -69,7 +69,7 @@ export function ModelPicker({ direction = "up" }: { direction?: "up" | "down" })
         className="flex max-w-64 items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-stone-700 hover:bg-stone-100"
         title="Choose model"
       >
-        {current && <span>{KIND_ICON[current.kind]}</span>}
+        {current && <span className="text-[10px] uppercase tracking-wide text-stone-400">{KIND_LABEL[current.kind]}</span>}
         <span className="truncate font-medium">{model?.model ?? (isLoading ? "Loading models…" : "Choose a model")}</span>
         <span className="text-stone-400">▾</span>
       </button>
@@ -100,7 +100,7 @@ export function ModelPicker({ direction = "up" }: { direction?: "up" | "down" })
             {groups.map((p) => (
               <div key={p.provider_id} className="py-1">
                 <div className="flex items-center gap-1 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-stone-400">
-                  <span>{KIND_ICON[p.kind]}</span> {p.label}
+                  {p.label}
                 </div>
                 {p.error && (
                   <div className="px-3 pb-1 text-xs text-stone-500">
@@ -134,12 +134,12 @@ export function ModelPicker({ direction = "up" }: { direction?: "up" | "down" })
                       <span className="flex-1 truncate">{m.id}</span>
                       {m.size && <span className="text-[10px] text-stone-400">{m.size}</span>}
                       {m.caps.includes("tools") && (
-                        <span className="rounded bg-sky-50 px-1 text-[10px] text-sky-700" title="Supports tool calling">
+                        <span className="rounded px-1 text-[10px] text-stone-400 ring-1 ring-stone-200" title="Supports tool calling">
                           tools
                         </span>
                       )}
                       {m.caps.includes("thinking") && (
-                        <span className="rounded bg-violet-50 px-1 text-[10px] text-violet-700" title="Supports thinking">
+                        <span className="rounded px-1 text-[10px] text-stone-400 ring-1 ring-stone-200" title="Supports thinking">
                           think
                         </span>
                       )}

@@ -4,39 +4,41 @@ use crate::events::Annotation;
 use crate::llm::truncate;
 use crate::session::Session;
 
-pub const GRADER_ROLE: &str = "You are a careful, fair essay grader. You ground every judgement in the essay text and \
+pub const GRADER_ROLE: &str = "You are a careful, fair essay grader. Ground every judgement in the essay text and \
 the rubric, quote the essay when you criticise it, and never invent facts about the essay.";
+
+/// Appended to every grading prompt: teachers read many of these, so every word must earn its place.
+pub const BREVITY: &str = "Be as concise as possible: plain, specific words; no preamble, hedging or repetition.";
 
 pub const RUBRIC_SYSTEM: &str = "Extract the grading criteria from a rubric written in Markdown. Use the rubric's own \
 criterion names and point values. If the rubric gives no points, assign each criterion an equal share of 100. \
-Keep descriptions short (one or two sentences summarising what earns full marks).";
+Each description is one short sentence on what earns full marks.";
 
-pub const THESIS_SYSTEM: &str = "Identify the central thesis (main claim or purpose) of the essay. Quote or closely \
-paraphrase the essay's own statement of it. If it is implicit, state it in one sentence and say so.";
+pub const THESIS_SYSTEM: &str = "Identify the essay's central thesis (main claim). Quote or closely paraphrase the \
+essay's own statement of it in one sentence.";
 
-pub const PARAGRAPH_SYSTEM: &str = "You score how much ONE paragraph of an essay contributes to the essay's thesis.\n\
-Score 0-100 using these anchors:\n\
-- 90-100: directly and convincingly advances the thesis (clear claim, strong evidence, analysis tied back to the thesis).\n\
-- 70-89: supports the thesis, with minor weaknesses (thin evidence, loose connection, some vagueness).\n\
-- 45-69: neutral or partly relevant: summary, filler, generic statements, or support that is asserted but not shown.\n\
-- 20-44: weak: mostly off-topic, unsupported, confusing, or undercuts the argument.\n\
+pub const PARAGRAPH_SYSTEM: &str = "Score how much ONE paragraph of an essay contributes to the essay's thesis, 0-100:\n\
+- 90-100: directly and convincingly advances the thesis.\n\
+- 70-89: supports it, with minor weaknesses (thin evidence, loose link, vagueness).\n\
+- 45-69: neutral or partly relevant: summary, filler, support asserted but not shown.\n\
+- 20-44: weak: mostly off-topic, unsupported or confusing.\n\
 - 0-19: contradicts or derails the thesis.\n\
-Introductions and conclusions are judged on how well they frame or close the argument. Use the full range; do not \
-default to 70-80. Add at most 3 specific comments; each comment's `quote` must be copied EXACTLY from the paragraph \
-(a short phrase or sentence), and the comment must say what to improve or what works.";
+Judge introductions and conclusions on how well they frame or close the argument. Use the full range; do not default \
+to 70-80. The rationale is one sentence of at most 20 words. Add at most 2 comments, only where they matter; each \
+`quote` is a short phrase copied EXACTLY from the paragraph and each `comment` is at most 15 words.";
 
-pub const CLAIMS_SYSTEM: &str = "List the essay's most important checkable factual claims: statistics, dates, \
-historical events, scientific statements, attributions of quotes. Skip opinions, the thesis itself, and common \
-knowledge. For each, copy the claim EXACTLY as written in the paragraph and give a concise web search query.";
+pub const CLAIMS_SYSTEM: &str = "List the essay's most important checkable factual claims (statistics, dates, events, \
+scientific statements, attributed quotes). Skip opinions, the thesis and common knowledge. Copy each claim EXACTLY \
+as written and give a short web search query.";
 
-pub const VERDICT_SYSTEM: &str = "Decide whether web search results support a factual claim from an essay. \
-`supported` = the sources agree; `contradicted` = reliable sources say otherwise; `unverifiable` = the results do \
-not settle it. Be conservative: only say contradicted when the evidence is clear. Cite the most relevant URL.";
+pub const VERDICT_SYSTEM: &str = "Decide whether web search results support a factual claim from an essay: \
+`supported` (sources agree), `contradicted` (reliable sources say otherwise) or `unverifiable`. Only say \
+contradicted when the evidence is clear. The explanation is one sentence. Cite the most relevant URL.";
 
-pub const ASSESSMENT_SYSTEM: &str = "Write the final assessment of the essay against the rubric. Score every rubric \
-criterion (never above its maximum) with a justification that cites paragraph keys like [P3] and short quotes as \
-evidence. The overall score is the sum of criterion scores. Consider paragraph scores, grammar issues, and \
-fact-check results provided. Be specific and constructive.";
+pub const ASSESSMENT_SYSTEM: &str = "Assess the essay against the rubric. Score every criterion (never above its \
+maximum); the overall score is their sum. Use the paragraph scores, grammar issues and fact-checks provided. Each \
+justification is one sentence citing paragraph keys like [P3]; evidence items are short quotes. The summary is at \
+most 2 sentences. Give at most 3 strengths and 3 improvements, each under 12 words.";
 
 pub fn chat_system(s: &Session, extra: Option<&str>, web_enabled: bool) -> String {
     let mut out = String::new();
@@ -54,7 +56,9 @@ directly. Each creates a proposal that the teacher must approve or reject. Only 
 warranted or requested, then tell the teacher briefly what you proposed. Messages may begin with [Review updates] \
 listing the teacher's decisions on earlier proposals; respect them and do not re-propose rejected changes unless asked.\n\
 Paragraph scores are 0-100 (the highlight goes from red at 0 through yellow to green at 100). Refer to paragraphs \
-by key, e.g. [P3]. Keep answers concise and use Markdown.\n",
+by key, e.g. [P3].\n\
+Answer as briefly as possible: one to three sentences or a few short bullets, no preamble, no restating the \
+question, no closing offers of further help. Use Markdown only when it helps.\n",
     );
     if let Some(extra) = extra {
         out.push_str("\nAdditional instructions from the teacher:\n");

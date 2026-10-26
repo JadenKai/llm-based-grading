@@ -1,21 +1,7 @@
 import { useState } from "react";
-import type { StepKind } from "../../api/gen/StepKind";
 import { useApp } from "../../stores/app";
 import type { StepNode, ToolCallView } from "../../stores/applyEvent";
 
-const ICON: Record<StepKind, string> = {
-  read_rubric: "📋",
-  grammar: "✍️",
-  thesis: "🎯",
-  score_paragraph: "🖍️",
-  fact_check: "🔎",
-  web_search: "🌐",
-  web_fetch: "📄",
-  comment: "💬",
-  assessment: "📝",
-  llm: "🧠",
-  tool: "🔧",
-};
 
 function StatusDot({ status }: { status: StepNode["status"] }) {
   if (status === "running")
@@ -32,12 +18,12 @@ function ThinkingBlock({ text, running }: { text: string; running: boolean }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="text-[11px] text-violet-600 hover:text-violet-800"
+        className="text-[11px] text-stone-400 hover:text-stone-700"
       >
-        {open ? "▾" : "▸"} {running ? "Thinking…" : "Thought process"} ({text.length.toLocaleString()} chars)
+        {open ? "▾" : "▸"} {running ? "Thinking…" : "Reasoning"}
       </button>
       {open && (
-        <pre className="mt-1 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-violet-50/60 p-2 font-sans text-xs leading-relaxed text-stone-600">
+        <pre className="mt-1 max-h-64 overflow-y-auto whitespace-pre-wrap rounded-md bg-stone-50 p-2 font-sans text-xs leading-relaxed text-stone-600">
           {text}
         </pre>
       )}
@@ -87,7 +73,6 @@ export function StepRow({ id, depth = 0 }: { id: string; depth?: number }) {
         <span className="mt-0.5 flex w-3 justify-center">
           <StatusDot status={step.status} />
         </span>
-        <span className="shrink-0">{ICON[step.kind]}</span>
         <div className="min-w-0 flex-1">
           <button
             type="button"

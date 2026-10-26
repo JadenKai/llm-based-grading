@@ -3,7 +3,9 @@ import { api, streams, type Envelope } from "../api/client";
 import type { ModelRef } from "../api/gen/ModelRef";
 import type { Paragraph } from "../api/gen/Paragraph";
 import type { ThinkSetting } from "../api/gen/ThinkSetting";
-import { applyEdit, extractParagraphs } from "../docx/bridge";
+import type { Proposal } from "../api/gen/Proposal";
+import { extractParagraphs } from "../docx/bridge";
+import { cleanText, finalizePreview, locate } from "../docx/previews";
 import { useEditorStore } from "../docx/editorStore";
 import { useApp } from "./app";
 
@@ -73,8 +75,9 @@ export async function cancelRun() {
 }
 
 /**
- * Accept or reject a proposal. Accepted edits are applied in the editor first, and the
- * resulting paragraph text is sent along so the backend can re-anchor other suggestions.
+ * Accept or reject a proposal. Suggested fixes are resolved in the editor first (accepted:
+ * the fix stays, in normal colour; rejected: the original returns), and the resulting clean
+ * paragraph text is sent along so the backend can re-anchor the remaining suggestions.
  */
 export async function decide(pid: string, decision: "accept" | "reject", note?: string) {
   const { session } = useApp.getState();
@@ -83,15 +86,21 @@ export async function decide(pid: string, decision: "accept" | "reject", note?: 
   if (!proposal) return;
   let paragraph_text: string | undefined;
   const ann = proposal.annotation;
-  if (decision === "accept" && ann.kind === "edit") {
-    const { editor, blocks } = useEditorStore.getState();
-    const block = blocks.get(ann.para);
-    if (!editor || !block) throw new Error("The document is not ready yet.");
-    const err = applyEdit(editor, block, ann.anchor, ann.replacement);
-    if (err) throw new Error(`Could not apply the edit: ${err}`);
+  if (ann.kind === "edit") {
+    const { editor } = useEditorStore.getState();
+    if (!editor) throw new Error("The document is not ready yet.");
+    const sameParagraph = (p: Proposal) => p.annotation.para === ann.para;
+    const block = extractParagraphs(editor).blocks.get(ann.para);
+    const l = block && locate(block.text, session.proposals.filter(sameParagraph)).find((x) => x.proposal.id === pid);
+    const err = block && l ? finalizePreview(editor, block, l, decision === "accept") : "the paragraph was not found";
+    if (err && decision === "accept") throw new Error(`Could not apply the fix: ${err}`);
     const fresh = extractParagraphs(editor);
     useEditorStore.getState().setBlocks(fresh.blocks);
-    paragraph_text = fresh.paragraphs.find((p) => p.key === ann.para)?.text;
+    const text = fresh.blocks.get(ann.para)?.text;
+    if (decision === "accept" && text !== undefined) {
+      const others = session.proposals.filter((p) => p.id !== pid && sameParagraph(p));
+      paragraph_text = cleanText(text, locate(text, others));
+    }
   }
   const resp = await api.decide(session.id, pid, { decision, note, paragraph_text });
   useApp.getState().applyDecision(resp);

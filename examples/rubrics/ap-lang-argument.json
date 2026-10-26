@@ -1,0 +1,36 @@
+{
+  "title": "AP Language Argument Essay (6 points)",
+  "description": "Scoring guide modeled on the AP English Language and Composition argument essay rubric.",
+  "criteria": [
+    {
+      "name": "Thesis",
+      "points": 1,
+      "description": "Responds to the prompt with a defensible thesis that presents a position.",
+      "levels": [
+        { "label": "1 point", "points": 1, "description": "A defensible thesis that responds to the prompt." },
+        { "label": "0 points", "points": 0, "description": "No defensible thesis, or it only restates the prompt or summarizes." }
+      ]
+    },
+    {
+      "name": "Evidence & Commentary",
+      "points": 4,
+      "description": "Specific evidence supports a line of reasoning, and commentary explains how.",
+      "levels": [
+        { "label": "4 points", "points": 4, "description": "Specific evidence for all claims in a line of reasoning; consistently explains how it supports the argument." },
+        { "label": "3 points", "points": 3, "description": "Specific evidence for all claims; explains how some of it supports the line of reasoning." },
+        { "label": "2 points", "points": 2, "description": "Some specific evidence; explains some of it, but the line of reasoning is missing or faulty." },
+        { "label": "1 point", "points": 1, "description": "Mostly general evidence; summarizes rather than explains." },
+        { "label": "0 points", "points": 0, "description": "Restates the thesis, or offers irrelevant or no evidence." }
+      ]
+    },
+    {
+      "name": "Sophistication",
+      "points": 1,
+      "description": "Demonstrates sophistication of thought or a complex understanding of the rhetorical situation.",
+      "levels": [
+        { "label": "1 point", "points": 1, "description": "Nuanced argument, situates it in a broader context, or a vivid, persuasive style throughout." },
+        { "label": "0 points", "points": 0, "description": "Does not meet the criteria for one point." }
+      ]
+    }
+  ]
+}

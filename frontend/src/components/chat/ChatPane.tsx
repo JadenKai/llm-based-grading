@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Proposal } from "../../api/gen/Proposal";
 import type { ThinkSetting } from "../../api/gen/ThinkSetting";
 import { useApp, usePrefs } from "../../stores/app";
-import type { ChatItem } from "../../stores/applyEvent";
+import type { Block, ChatItem } from "../../stores/applyEvent";
 import { cancelRun, decideAll, sendChat } from "../../stores/runs";
 import { ProposalCard } from "../annotations/ProposalCard";
 import { Markdown } from "../Markdown";
 import { ModelPicker } from "../ModelPicker";
+import { VerdictWidget } from "../assessment/VerdictWidget";
 import { StepRow } from "./StepRow";
 
 const NO_PROPOSALS: Proposal[] = [];
@@ -23,39 +24,68 @@ function ProposalsBlock({ ids }: { ids: string[] }) {
   );
 }
 
+/** Steps of a finished run, folded into one line. */
+function StepGroup({ ids, live }: { ids: string[]; live: boolean }) {
+  const [open, setOpen] = useState(false);
+  const steps = useApp((s) => s.steps);
+  if (live) return <>{ids.map((id) => <StepRow key={id} id={id} />)}</>;
+  const errors = ids.filter((id) => steps[id]?.status === "error").length;
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="text-xs text-stone-400 hover:text-stone-700">
+        {open ? "▾" : "▸"} {ids.length} step{ids.length > 1 ? "s" : ""}
+        {errors > 0 && <span className="text-red-500"> · {errors} failed</span>}
+      </button>
+      {open && <div className="mt-1">{ids.map((id) => <StepRow key={id} id={id} />)}</div>}
+    </div>
+  );
+}
+
 function AssistantMessage({ item }: { item: Extract<ChatItem, { kind: "assistant" }> }) {
   const empty = item.blocks.length === 0;
+  const live = item.status === "running";
+  // Consecutive steps render as one group.
+  const groups: (Block | { type: "steps"; ids: string[] })[] = [];
+  for (const b of item.blocks) {
+    const last = groups[groups.length - 1];
+    if (b.type === "step") {
+      if (last?.type === "steps") last.ids.push(b.stepId);
+      else groups.push({ type: "steps", ids: [b.stepId] });
+    } else groups.push(b);
+  }
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <div className="flex items-center gap-2 text-[11px] text-stone-400">
-        <span className="font-semibold text-stone-500">{item.runKind === "grade" ? "Grading" : "Assistant"}</span>
-        {item.model?.model && <span className="font-mono">{item.model.model}</span>}
-        {item.usage.completion > 0 && (
-          <span title="prompt / completion tokens">
-            {item.usage.prompt.toLocaleString()} → {item.usage.completion.toLocaleString()} tok
-          </span>
-        )}
-        {item.status === "cancelled" && <span className="text-stone-500">· stopped</span>}
+        <span className="font-medium text-stone-500">{item.runKind === "grade" ? "Grading" : "Assistant"}</span>
+        {item.model?.model && <span>{item.model.model}</span>}
+        {item.status === "cancelled" && <span>· stopped</span>}
         {item.status === "failed" && <span className="text-red-500">· failed</span>}
       </div>
-      {empty && item.status === "running" && <div className="text-sm text-stone-400">Starting…</div>}
-      {item.blocks.map((b, i) => {
+      {empty && live && <div className="text-sm text-stone-400">Starting…</div>}
+      {groups.map((b, i) => {
         switch (b.type) {
+          case "steps":
+            return <StepGroup key={`s${i}`} ids={b.ids} live={live} />;
           case "step":
-            return <StepRow key={b.stepId} id={b.stepId} />;
+            return null;
           case "text":
-            return <Markdown key={b.messageId + i} className="text-sm text-stone-800">{b.text}</Markdown>;
+            return (
+              <Markdown key={b.messageId + i} className="text-sm text-stone-800">
+                {b.text}
+              </Markdown>
+            );
           case "proposals":
             return <ProposalsBlock key={`p${i}`} ids={b.ids} />;
           case "error":
             return (
-              <div
-                key={`e${i}`}
-                className={`rounded-md px-2.5 py-1.5 text-xs ${
-                  b.recoverable ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700"
-                }`}
-              >
+              <div key={`e${i}`} className={`text-xs ${b.recoverable ? "text-amber-700" : "text-red-600"}`}>
                 {b.message}
+              </div>
+            );
+          case "verdict":
+            return (
+              <div key={`v${i}`} className="rounded-lg border border-stone-200 p-3">
+                <VerdictWidget assessment={b.assessment} compact />
               </div>
             );
         }

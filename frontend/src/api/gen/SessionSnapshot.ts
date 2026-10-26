@@ -5,10 +5,15 @@ import type { FactCheck } from "./FactCheck";
 import type { ModelRef } from "./ModelRef";
 import type { Paragraph } from "./Paragraph";
 import type { Proposal } from "./Proposal";
+import type { Rubric } from "./Rubric";
 import type { RubricCriterion } from "./RubricCriterion";
 import type { JsonValue } from "./serde_json/JsonValue";
 
-export type SessionSnapshot = { id: string, created_at: string, essay_name: string, rubric_name: string, rubric_md: string, paragraphs: Array<Paragraph>, annotations: Array<Annotation>, proposals: Array<Proposal>, thesis: string | null, criteria: Array<RubricCriterion>, fact_checks: Array<FactCheck>, original_assessment: Assessment | null, graded: boolean, model: ModelRef | null, 
+export type SessionSnapshot = { id: string, created_at: string, essay_name: string, rubric_name: string, 
+/**
+ * Rubric as text for prompts (rendered from `rubric`; Markdown in sessions from before JSON rubrics).
+ */
+rubric_md: string, rubric: Rubric | null, paragraphs: Array<Paragraph>, annotations: Array<Annotation>, proposals: Array<Proposal>, thesis: string | null, criteria: Array<RubricCriterion>, fact_checks: Array<FactCheck>, original_assessment: Assessment | null, graded: boolean, model: ModelRef | null, 
 /**
  * Every event of finished runs, for replaying the chat.
  */

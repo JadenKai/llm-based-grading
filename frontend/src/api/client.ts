@@ -9,8 +9,11 @@ import type { ProviderModels } from "./gen/ProviderModels";
 import type { DecisionReq } from "./gen/DecisionReq";
 import type { DecisionResp } from "./gen/DecisionResp";
 import type { ThinkSetting } from "./gen/ThinkSetting";
+import type { Presets } from "./gen/Presets";
 
 export type Envelope = { seq: number; run_id: string } & Event;
+
+export type Source = File | { preset: string };
 
 export class ApiError extends Error {
   status: number;
@@ -52,10 +55,14 @@ export const api = {
     }),
 
   listSessions: () => request<SessionSummary[]>("/api/sessions"),
-  createSession: (essay: File, rubric: File) => {
+  presets: () => request<Presets>("/api/presets"),
+  /** Each source is an uploaded file or the id of a bundled example. */
+  createSession: (essay: Source, rubric: Source) => {
     const fd = new FormData();
-    fd.append("essay", essay);
-    fd.append("rubric", rubric);
+    if (essay instanceof File) fd.append("essay", essay);
+    else fd.append("essay_preset", essay.preset);
+    if (rubric instanceof File) fd.append("rubric", rubric);
+    else fd.append("rubric_preset", rubric.preset);
     return request<{ session_id: string }>("/api/sessions", { method: "POST", body: fd });
   },
   getSession: (id: string) => request<SessionSnapshot>(`/api/sessions/${id}`),

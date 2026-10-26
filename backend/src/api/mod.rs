@@ -50,6 +50,7 @@ pub fn router(state: Shared) -> Router {
         .route("/api/models", get(settings::list_models))
         .route("/api/providers/{id}/test", post(settings::test_provider))
         .route("/api/grammar", post(settings::grammar_check))
+        .route("/api/presets", get(sessions::presets_list))
         .route("/api/sessions", get(sessions::list).post(sessions::create))
         .route("/api/sessions/{id}", get(sessions::get).delete(sessions::delete))
         .route("/api/sessions/{id}/docx", get(sessions::docx).put(sessions::put_docx))

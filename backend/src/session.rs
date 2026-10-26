@@ -13,6 +13,7 @@ use uuid::Uuid;
 
 use crate::events::{Annotation, Assessment, Envelope, ModelRef, Paragraph, Proposal, ProposalStatus};
 use crate::llm::ChatMessage;
+use crate::rubric::Rubric;
 use crate::text::{find_anchor, slice_utf16, utf16_prefix};
 
 #[derive(Serialize, Deserialize, TS, Clone, Debug)]
@@ -40,7 +41,9 @@ pub struct Session {
     pub created_at: String,
     pub essay_name: String,
     pub rubric_name: String,
+    /// Rubric as text for prompts (rendered from `rubric`; Markdown in sessions from before JSON rubrics).
     pub rubric_md: String,
+    pub rubric: Option<Rubric>,
     pub paragraphs: Vec<Paragraph>,
     pub annotations: Vec<Annotation>,
     pub proposals: Vec<Proposal>,
@@ -64,7 +67,9 @@ pub struct SessionSnapshot {
     pub created_at: String,
     pub essay_name: String,
     pub rubric_name: String,
+    /// Rubric as text for prompts (rendered from `rubric`; Markdown in sessions from before JSON rubrics).
     pub rubric_md: String,
+    pub rubric: Option<Rubric>,
     pub paragraphs: Vec<Paragraph>,
     pub annotations: Vec<Annotation>,
     pub proposals: Vec<Proposal>,
@@ -103,6 +108,7 @@ impl Session {
             essay_name: self.essay_name.clone(),
             rubric_name: self.rubric_name.clone(),
             rubric_md: self.rubric_md.clone(),
+            rubric: self.rubric.clone(),
             paragraphs: self.paragraphs.clone(),
             annotations: self.annotations.clone(),
             proposals: self.proposals.clone(),

@@ -1,0 +1,77 @@
+{
+  "title": "Argumentative Essay Rubric",
+  "description": "For a single-author argumentative essay of roughly 500–900 words.",
+  "criteria": [
+    {
+      "name": "Claim & Thesis",
+      "points": 5,
+      "description": "A precise, arguable thesis in the introduction that previews the main reasons.",
+      "levels": [
+        { "label": "Exemplary", "points": 5, "description": "Precise, arguable thesis early on; previews the main lines of reasoning." },
+        { "label": "Proficient", "points": 4, "description": "Clear, arguable thesis; preview of reasons is partial." },
+        { "label": "Developing", "points": 2, "description": "Thesis is vague, overly broad, or appears late." },
+        { "label": "Beginning", "points": 0, "description": "No identifiable thesis, or the thesis is a statement of fact." }
+      ]
+    },
+    {
+      "name": "Evidence & Accuracy",
+      "points": 6,
+      "description": "Specific, relevant and accurate evidence supports every reason.",
+      "levels": [
+        { "label": "Exemplary", "points": 6, "description": "Specific, accurate evidence (statistics, examples, cases) for every reason." },
+        { "label": "Proficient", "points": 4, "description": "Evidence supports most reasons; minor vagueness." },
+        { "label": "Developing", "points": 2, "description": "General, thin or partly irrelevant evidence; one factual error." },
+        { "label": "Beginning", "points": 0, "description": "Little or no evidence, or several factual errors." }
+      ]
+    },
+    {
+      "name": "Reasoning & Analysis",
+      "points": 5,
+      "description": "Explains how each piece of evidence proves the claim.",
+      "levels": [
+        { "label": "Exemplary", "points": 5, "description": "Explains how each piece of evidence proves the claim; logical and insightful." },
+        { "label": "Proficient", "points": 4, "description": "Analysis for most evidence, sometimes summary-like." },
+        { "label": "Developing", "points": 2, "description": "Evidence is mostly listed rather than explained." },
+        { "label": "Beginning", "points": 0, "description": "Claims asserted without support or explanation." }
+      ]
+    },
+    {
+      "name": "Counterclaim & Rebuttal",
+      "points": 3,
+      "description": "Fairly states a serious opposing view and rebuts it.",
+      "levels": [
+        { "label": "Exemplary", "points": 3, "description": "States a serious opposing view fairly and rebuts it convincingly." },
+        { "label": "Proficient", "points": 2, "description": "Acknowledges a counterclaim; brief rebuttal." },
+        { "label": "Developing", "points": 1, "description": "Straw-man counterclaim or missing rebuttal." },
+        { "label": "Beginning", "points": 0, "description": "No counterclaim." }
+      ]
+    },
+    {
+      "name": "Organization & Coherence",
+      "points": 3,
+      "description": "Every paragraph serves the thesis, in a logical order with clear transitions.",
+      "levels": [
+        { "label": "Exemplary", "points": 3, "description": "Every paragraph serves the thesis; logical order; clear topic sentences and transitions." },
+        { "label": "Proficient", "points": 2, "description": "Mostly focused and ordered; one weak transition." },
+        { "label": "Developing", "points": 1, "description": "One paragraph is off-topic or out of place." },
+        { "label": "Beginning", "points": 0, "description": "Disorganized; frequent digressions." }
+      ]
+    },
+    {
+      "name": "Language & Conventions",
+      "points": 3,
+      "description": "Precise, formal style; essentially free of errors.",
+      "levels": [
+        { "label": "Exemplary", "points": 3, "description": "Precise, formal style; essentially error-free." },
+        { "label": "Proficient", "points": 2, "description": "A few minor errors that do not distract." },
+        { "label": "Developing", "points": 1, "description": "Repeated errors (agreement, homophones, articles) that distract." },
+        { "label": "Beginning", "points": 0, "description": "Errors frequently obscure meaning." }
+      ]
+    }
+  ],
+  "notes": [
+    "Personal anecdotes that do not support the thesis count against Organization & Coherence.",
+    "A factual inaccuracy lowers Evidence & Accuracy even if the surrounding argument is strong.",
+    "Judge the overall pattern of errors under Language & Conventions; do not deduct twice for one error."
+  ]
+}

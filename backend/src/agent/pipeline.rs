@@ -31,20 +31,13 @@ pub async fn run_grading(ctx: &RunCtx) -> anyhow::Result<()> {
     fact_check(ctx).await?;
     let assessment = assess(ctx, &thesis, &criteria).await?;
 
-    let (pending, comments) = {
-        let s = ctx.session.read().await;
-        (
-            s.proposals.iter().filter(|p| p.status == ProposalStatus::Pending).count(),
-            s.annotations.iter().filter(|a| matches!(a, Annotation::Comment { .. })).count(),
-        )
+    // The verdict itself is shown as a widget (from the `assessment` event); this line only
+    // points at what still needs the teacher.
+    let pending = ctx.session.read().await.proposals.iter().filter(|p| p.status == ProposalStatus::Pending).count();
+    let msg = match pending {
+        0 => assessment.summary.clone(),
+        n => format!("{}\n\n{n} suggested fix(es) to review.", assessment.summary),
     };
-    let msg = format!(
-        "**Grading complete — {:.1} / {:.1}**\n\n{}\n\nParagraphs are highlighted from green (advances the thesis) \
-to red (detracts). I left {comments} comment(s), and {pending} grammar suggestion(s) are waiting for your review: \
-press **Show details** on the essay, or open the **Review** tab. The full breakdown is in **Original Assessment**. \
-Ask me anything about the grade.",
-        assessment.overall, assessment.max, assessment.summary
-    );
     ctx.emit(Event::TextDelta { message_id: format!("{}_summary", ctx.run.id), text: msg });
     Ok(())
 }
@@ -55,6 +48,16 @@ async fn read_rubric(ctx: &RunCtx) -> anyhow::Result<Vec<RubricCriterion>> {
         criteria: Vec<RubricCriterion>,
     }
     let step = ctx.step_start(StepKind::ReadRubric, "Reading rubric", None);
+    // JSON rubrics are already structured: no model call needed. (Bind first: the read guard
+    // must be released before the write below.)
+    let structured = ctx.session.read().await.rubric.clone();
+    if let Some(r) = structured {
+        let fmt = |p: f32| if p.fract() == 0.0 { format!("{p:.0}") } else { format!("{p}") };
+        ctx.step_end(&step, StepStatus::Ok, format!("{} criteria, {} points", r.criteria.len(), fmt(r.total())));
+        let criteria = r.criteria_list();
+        ctx.session.write().await.criteria = criteria.clone();
+        return Ok(criteria);
+    }
     let rubric = ctx.session.read().await.rubric_md.clone();
     let schema = json!({
         "type": "object",
@@ -237,7 +240,7 @@ async fn score_one(
         "role": {"type": "string", "description": "introduction, thesis, evidence, analysis, counterargument, transition, conclusion, or off-topic"},
         "score": {"type": "integer", "minimum": 0, "maximum": 100},
         "rationale": {"type": "string"},
-        "comments": {"type": "array", "maxItems": 3, "items": {"type": "object", "properties": {
+        "comments": {"type": "array", "maxItems": 2, "items": {"type": "object", "properties": {
             "quote": {"type": "string"}, "comment": {"type": "string"}
         }, "required": ["quote", "comment"]}}
     }, "required": ["role", "score", "rationale", "comments"]});
@@ -260,7 +263,7 @@ async fn score_one(
         let rationale =
             if out.role.is_empty() { out.rationale.clone() } else { format!("({}) {}", out.role, out.rationale) };
         anns.push(Annotation::Score { id: s.next_id("a"), para: p.key.clone(), score, rationale });
-        for c in out.comments.into_iter().take(3) {
+        for c in out.comments.into_iter().take(2) {
             anns.push(Annotation::Comment {
                 id: s.next_id("a"),
                 para: p.key.clone(),

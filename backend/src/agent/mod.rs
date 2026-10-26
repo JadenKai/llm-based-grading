@@ -16,7 +16,7 @@ use tokio::sync::RwLock;
 use crate::config::{ModelParams, ThinkSetting};
 use crate::events::{Annotation, Event, ModelRef, Proposal, ProposalStatus, RunKind, StepKind, StepStatus};
 use crate::llm::json_repair::parse_lenient;
-use crate::llm::{ChatChunk, ChatMessage, ChatRequest, Provider, Role, ToolCall, ToolSpec};
+use crate::llm::{ChatChunk, ChatMessage, ChatRequest, Provider, Role, ToolCall, ToolSpec, structured, truncate};
 use crate::session::Session;
 use crate::state::{Run, Shared};
 use crate::web::WebClient;
@@ -122,7 +122,11 @@ impl RunCtx {
     }
 
     /// Ask for a JSON object matching `schema` and deserialize it, retrying once with a
-    /// correction message if the model's output does not parse.
+    /// correction message if the reply is not JSON or has the wrong shape.
+    ///
+    /// The schema is also sent as `format`, but not every server enforces it (Ollama Cloud
+    /// ignores it for some models), so the prompt describes the fields in prose: pasting the
+    /// raw schema makes some models imitate it and nest the answer under `"properties"`.
     pub async fn complete_json<T: DeserializeOwned>(
         &self,
         system: &str,
@@ -136,9 +140,12 @@ impl RunCtx {
         if matches!(params.think, Some(ThinkSetting::High)) {
             params.think = Some(ThinkSetting::Medium);
         }
+        let required = structured::required_keys(&schema);
         let system = format!(
-            "{system}\n\nRespond with ONLY a JSON object matching this JSON schema, no prose:\n{}",
-            serde_json::to_string(&schema)?
+            "{system}\n{}\n\nReply with ONLY a JSON object — no Markdown, no code fences, no other text — whose top-level \
+keys are:\n{}",
+            prompts::BREVITY,
+            structured::describe(&schema)
         );
         let mut messages = vec![ChatMessage::system(system), ChatMessage::user(user)];
         let mut last_err = None;
@@ -151,17 +158,25 @@ impl RunCtx {
                 params: params.clone(),
             };
             let out = self.stream_llm(req, step_id, None).await?;
-            let parsed = parse_lenient(&out.text).ok_or_else(|| anyhow::anyhow!("model did not return JSON"));
-            match parsed.and_then(|v| serde_json::from_value::<T>(v).map_err(anyhow::Error::from)) {
+            let result = match parse_lenient(&out.text) {
+                None => Err(anyhow::anyhow!("the reply was not JSON")),
+                Some(v) => serde_json::from_value::<T>(structured::unwrap_nested(v, &required))
+                    .map_err(|e| anyhow::anyhow!("the reply had the wrong fields ({e})")),
+            };
+            match result {
                 Ok(t) => return Ok(t),
                 Err(e) => {
-                    tracing::warn!("structured output attempt {attempt} failed: {e}");
+                    tracing::warn!(
+                        "structured output attempt {attempt} failed: {e}; reply: {}",
+                        truncate(&out.text, 300)
+                    );
                     if attempt == 0 {
-                        self.step_detail(step_id, "Output was not valid JSON — retrying");
+                        self.step_detail(step_id, "Reply didn't match the expected format — retrying");
                     }
-                    messages.push(ChatMessage { role: Role::Assistant, ..ChatMessage::new(Role::Assistant, out.text) });
+                    messages.push(ChatMessage::new(Role::Assistant, out.text));
                     messages.push(ChatMessage::user(format!(
-                        "That response was invalid ({e}). Reply again with ONLY the JSON object."
+                        "Invalid: {e}. Reply again with ONLY a JSON object whose top-level keys are: {}.",
+                        required.join(", ")
                     )));
                     last_err = Some(e);
                 }

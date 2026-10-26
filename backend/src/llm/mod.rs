@@ -4,6 +4,7 @@ pub mod json_repair;
 pub mod ollama;
 pub mod openai;
 pub mod registry;
+pub mod structured;
 #[cfg(test)]
 mod tests;
 pub mod think_tags;
