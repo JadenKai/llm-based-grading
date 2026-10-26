@@ -8,7 +8,7 @@ import type { SessionSnapshot } from "../api/gen/SessionSnapshot";
 import type { ThinkSetting } from "../api/gen/ThinkSetting";
 import { type AppData, applyEvent, emptyData, replay, sessionFromSnapshot } from "./applyEvent";
 
-export type Tab = "essay" | "rubric" | "assessment";
+export type Tab = "essay" | "rubric" | "assessment" | "review";
 
 interface AppStore extends AppData {
   tab: Tab;

@@ -87,7 +87,7 @@ function Composer() {
   const [text, setText] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const proposals = useApp((s) => s.session?.proposals);
-  // Agent proposals only; grammar fixes are reviewed in the Essay tab.
+  // Agent proposals only; grammar fixes are reviewed in the Review tab.
   const pending = useMemo(
     () =>
       (proposals ?? []).filter(

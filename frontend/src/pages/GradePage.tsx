@@ -18,6 +18,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "essay", label: "Essay" },
   { id: "rubric", label: "Rubric" },
   { id: "assessment", label: "Original Assessment" },
+  { id: "review", label: "Review" },
 ];
 
 function ExportButton({ name }: { name: string }) {
@@ -59,6 +60,8 @@ export function GradePage() {
   const setTab = useApp((s) => s.setTab);
   const activeRunId = useApp((s) => s.activeRunId);
   const items = useApp((s) => s.items);
+  const pendingCount = session?.proposals.filter((p) => p.status === "pending").length ?? 0;
+  const reviewOpen = useEditorStore((s) => s.reviewOpen);
   const model = useEnsureModel();
   const [paragraphs, setParagraphs] = useState<Paragraph[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -66,16 +69,23 @@ export function GradePage() {
 
   useEffect(() => {
     if (!id) return;
+    // A superseded load (essay switched, or StrictMode's double effect) must not land late
+    // and overwrite state that grading has already started filling in.
+    let alive = true;
     autoStarted.current = false;
     setParagraphs(null);
     useApp.getState().reset();
     api
       .getSession(id)
       .then((snap) => {
+        if (!alive) return;
         useApp.getState().loadSession(snap);
         if (snap.active_run) attachRun(id, snap.active_run);
       })
-      .catch((e) => setLoadError(e.message));
+      .catch((e) => alive && setLoadError(e.message));
+    return () => {
+      alive = false;
+    };
   }, [id]);
 
   const onParagraphs = useCallback((ps: Paragraph[]) => setParagraphs(ps), []);
@@ -150,21 +160,36 @@ export function GradePage() {
                 }`}
               >
                 {t.label}
+                {t.id === "review" && pendingCount > 0 && (
+                  <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-px text-[11px] font-medium text-amber-800">
+                    {pendingCount}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
           <div className="relative min-h-0 flex-1">
+            {/* Kept mounted (just hidden) so the editor and its highlights survive tab switches. */}
             <div className={`absolute inset-0 flex flex-col ${tab === "essay" ? "" : "invisible"}`}>
               <div className="border-b border-stone-100 px-3 py-1.5">
                 <ScoreLegend />
               </div>
               <div className="flex min-h-0 flex-1">
-                <div className="min-w-0 flex-1">{id && <DocxView sessionId={id} title={session?.essayName} onParagraphs={onParagraphs} />}</div>
-                <div className="w-80 shrink-0">
-                  <AnnotationPanel />
+                <div className="min-w-0 flex-1">
+                  {id && <DocxView sessionId={id} title={session?.essayName} onParagraphs={onParagraphs} />}
                 </div>
+                {reviewOpen && (
+                  <div className="w-[22rem] shrink-0">
+                    <AnnotationPanel variant="docked" />
+                  </div>
+                )}
               </div>
             </div>
+            {tab === "review" && (
+              <div className="absolute inset-0">
+                <AnnotationPanel />
+              </div>
+            )}
             {tab === "rubric" && (
               <div className="absolute inset-0 overflow-y-auto">
                 <div className="mx-auto max-w-3xl p-6">

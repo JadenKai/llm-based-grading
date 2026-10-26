@@ -40,8 +40,9 @@ pub async fn run_grading(ctx: &RunCtx) -> anyhow::Result<()> {
     };
     let msg = format!(
         "**Grading complete — {:.1} / {:.1}**\n\n{}\n\nParagraphs are highlighted from green (advances the thesis) \
-to red (detracts). I left {comments} comment(s), and {pending} grammar suggestion(s) are waiting for your review in \
-the Essay tab. The full breakdown is in **Original Assessment**. Ask me anything about the grade.",
+to red (detracts). I left {comments} comment(s), and {pending} grammar suggestion(s) are waiting for your review: \
+press **Show details** on the essay, or open the **Review** tab. The full breakdown is in **Original Assessment**. \
+Ask me anything about the grade.",
         assessment.overall, assessment.max, assessment.summary
     );
     ctx.emit(Event::TextDelta { message_id: format!("{}_summary", ctx.run.id), text: msg });

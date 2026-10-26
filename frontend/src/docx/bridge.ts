@@ -82,6 +82,8 @@ export interface HighlightState {
   annotations: Annotation[];
   proposals: Proposal[];
   showScores: boolean;
+  /** Paint comment, grammar and proposal marks (otherwise only paragraph scores and the focus). */
+  showDetails: boolean;
   focusAnnotation: string | null;
 }
 
@@ -127,18 +129,31 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
       console.warn(`highlight set ${name} failed`, e);
     }
   };
+  const details = (ranges: Range[]) => (st.showDetails ? ranges : []);
   SCORE_SETS.forEach((name, b) => set(name, scoreRanges[b], scoreColor(b), "grader-score", 0));
-  set("comments", comments, "oklch(0.86 0.08 250)", "grader-comment", 3);
-  set("grammar", harperEdits, "oklch(0.86 0.12 20)", "grader-grammar", 4);
-  set("proposals", agentPending, "oklch(0.86 0.1 300)", "grader-proposal", 5);
-  set("pending-scores", pendingScores, "transparent", "grader-proposal", 2);
+  set("comments", details(comments), "oklch(0.86 0.08 250)", "grader-comment", 3);
+  set("grammar", details(harperEdits), "oklch(0.86 0.12 20)", "grader-grammar", 4);
+  set("proposals", details(agentPending), "oklch(0.86 0.1 300)", "grader-proposal", 5);
+  set("pending-scores", details(pendingScores), "transparent", "grader-proposal", 2);
+  // The focus mark is always shown: it only appears when the teacher picked an item.
   set("focus", focus, "oklch(0.83 0.15 60)", "grader-focus", 10);
 }
 
-/** Annotation ids under a client point, topmost first. */
-export function annotationsAt(editor: Editor, x: number, y: number): { annId?: string; para: string }[] {
+export interface Hit {
+  annId?: string;
+  para: string;
+  /** The marked line box, in client coordinates. */
+  rect: { left: number; top: number; bottom: number };
+}
+
+/** Annotations painted under a client point, topmost first. */
+export function annotationsAt(editor: Editor, x: number, y: number): Hit[] {
   try {
-    return editor.getHighlightsAt<Range>(x, y).map((h) => ({ annId: h.range.annId, para: h.range.para }));
+    return editor.getHighlightsAt<Range>(x, y).map((h) => ({
+      annId: h.range.annId,
+      para: h.range.para,
+      rect: { left: h.rect.left, top: h.rect.top, bottom: h.rect.bottom },
+    }));
   } catch {
     return [];
   }

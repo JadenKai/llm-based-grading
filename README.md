@@ -55,5 +55,5 @@ just gen-types   # regenerate frontend/src/api/gen/*.ts from the Rust types (ts-
 
 ## Known limitations
 
-- Comments and suggestions are shown in the app's own review panel. They are not written into the exported `.docx`, because native Word comments and tracked changes need docx-editor's commercial Pro package. Highlights are also view-only.
+- Comments and suggestions are shown in the app itself (press **Show details** on the essay, or open the **Review** tab). They are not written into the exported `.docx`, because native Word comments and tracked changes need docx-editor's commercial Pro package. Highlights are also view-only.
 - Paragraphs are identified by order (`P1`, `P2`, …). Splitting or merging paragraphs by hand after grading can move annotations onto the wrong paragraph.

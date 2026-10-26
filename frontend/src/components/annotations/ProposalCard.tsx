@@ -66,13 +66,40 @@ export function ProposalBody({ proposal }: { proposal: Proposal }) {
 
 const KIND_LABEL = { score: "Score change", comment: "Comment", edit: "Edit" } as const;
 
-export function ProposalCard({ proposal, compact = false }: { proposal: Proposal; compact?: boolean }) {
+/** Jump to the passage in the Essay tab and mark it. */
+export function LocateButton({ para, annId }: { para: string; annId: string | null }) {
+  const focus = useApp((s) => s.focus);
+  const setTab = useApp((s) => s.setTab);
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        setTab("essay");
+        focus(para, annId);
+      }}
+      className="text-[11px] text-stone-500 hover:text-stone-900 hover:underline"
+      title="Show this passage in the essay"
+    >
+      Show in essay ↗
+    </button>
+  );
+}
+
+export function ProposalCard({
+  proposal,
+  compact = false,
+  locate = true,
+}: {
+  proposal: Proposal;
+  compact?: boolean;
+  /** Offer "Show in essay" (off when the card is already shown on the essay). */
+  locate?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState("");
-  const focus = useApp((s) => s.focus);
-  const setTab = useApp((s) => s.setTab);
   const focused = useApp((s) => s.focusAnnotation === proposal.annotation.id);
   const a = proposal.annotation;
   const source = a.kind === "edit" && a.source === "harper" ? "Grammar (Harper)" : "Agent";
@@ -95,16 +122,18 @@ export function ProposalCard({ proposal, compact = false }: { proposal: Proposal
       className={`rounded-lg border bg-white p-2.5 shadow-sm transition ${
         focused ? "border-amber-400 ring-2 ring-amber-200" : "border-stone-200"
       }`}
-      onClick={() => {
-        setTab("essay");
-        focus(a.para, a.id);
-      }}
     >
       <div className="mb-1.5 flex items-center gap-1.5 text-[11px]">
         <span className="font-mono font-semibold text-stone-600">{a.para}</span>
         <span className="text-stone-400">·</span>
         <span className="text-stone-500">{KIND_LABEL[a.kind]}</span>
         {!compact && <span className="text-stone-400">· {source}</span>}
+        {locate && (
+          <>
+            <span className="text-stone-300">·</span>
+            <LocateButton para={a.para} annId={a.id} />
+          </>
+        )}
         <span className={`ml-auto rounded px-1.5 py-0.5 font-medium ${STATUS_STYLE[proposal.status]}`}>
           {proposal.status === "pending" ? "needs review" : proposal.status}
         </span>
