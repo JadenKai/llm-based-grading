@@ -11,3 +11,4 @@
 - [x] All prompts should be condusive to as consice of an answer as possible
 - [x] Add a visualization widget for the final verdict of the essay
 - [x] Aim to have a minimalist and clean design for the UI
+- [ ] Add a way to have the essay and another tab open at the same time
