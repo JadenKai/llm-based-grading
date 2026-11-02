@@ -5,15 +5,22 @@ import { scoreLabel } from "../../docx/colors";
 import { useEditorStore } from "../../docx/editorStore";
 import { useApp } from "../../stores/app";
 import { decideAll } from "../../stores/runs";
+import { AddCommentLink, InstructorCommentCard } from "./InstructorComments";
 import { LocateButton, ProposalCard, ScoreChip } from "./ProposalCard";
 
-type Filter = "all" | "pending" | "comments";
+type Filter = "all" | "pending" | "comments" | "instructor";
 type Comment = Extract<Annotation, { kind: "comment" }>;
 type Score = Extract<Annotation, { kind: "score" }>;
 
-const AUTHOR_LABEL = { agent: "Grader", grammar: "Grammar", fact_check: "Fact-check" } as const;
+const AUTHOR_LABEL = { agent: "Grader", grammar: "Grammar", fact_check: "Fact-check", instructor: "Instructor" } as const;
 
 export function CommentCard({ a, locate = true }: { a: Comment; locate?: boolean }) {
+  if (a.author === "instructor") return <InstructorCommentCard a={a} locate={locate} />;
+  return <ModelCommentCard a={a} locate={locate} />;
+}
+
+/** A comment written by the model or the grammar checker (marked "AI"). */
+function ModelCommentCard({ a, locate }: { a: Comment; locate: boolean }) {
   const focused = useApp((s) => s.focusAnnotation === a.id);
   const tone =
     a.author === "fact_check" ? "border-l-orange-400" : a.author === "grammar" ? "border-l-rose-300" : "border-l-sky-400";
@@ -25,6 +32,7 @@ export function CommentCard({ a, locate = true }: { a: Comment; locate?: boolean
     >
       <div className="mb-1 flex items-center gap-1.5 text-[11px] text-stone-500">
         <span className="font-mono font-semibold text-stone-600">{a.para}</span>· {AUTHOR_LABEL[a.author]}
+        <span className="rounded px-1 text-[9px] font-medium tracking-wide text-stone-400 ring-1 ring-stone-200">AI</span>
         {locate && (
           <>
             <span className="text-stone-300">·</span>
@@ -132,7 +140,7 @@ export function AnnotationPanel({ variant = "tab" }: { variant?: "tab" | "docked
             </div>
           )}
           <div className="flex gap-1 text-xs">
-            {(["all", "pending", "comments"] as const).map((f) => (
+            {(["all", "pending", "comments", "instructor"] as const).map((f) => (
               <button
                 type="button"
                 key={f}
@@ -179,8 +187,9 @@ export function AnnotationPanel({ variant = "tab" }: { variant?: "tab" | "docked
           {groups.length === 0 && <p className="text-sm text-stone-500">Comments and suggestions appear here as the essay is graded.</p>}
           {groups.map(({ p, score, comments, proposals }) => {
             const shownProposals = proposals.filter(visibleProposal);
-            const shownComments = filter === "pending" ? [] : comments;
-            if (filter !== "all" && !shownProposals.length && !shownComments.length) return null;
+            const mine = filter === "pending" ? [] : comments.filter((c) => c.author === "instructor");
+            const shownComments = filter === "pending" || filter === "instructor" ? [] : comments.filter((c) => c.author !== "instructor");
+            if (filter !== "all" && !shownProposals.length && !shownComments.length && !mine.length) return null;
             return (
               <section key={p.key} className="space-y-2">
                 <div className="flex items-center gap-2 border-b border-stone-200 pb-1 text-xs text-stone-500">
@@ -196,6 +205,12 @@ export function AnnotationPanel({ variant = "tab" }: { variant?: "tab" | "docked
                     {score.rationale}
                   </p>
                 )}
+                {mine.map((c) => (
+                  <div key={c.id} data-ann={c.id}>
+                    <InstructorCommentCard a={c} />
+                  </div>
+                ))}
+                {(filter === "all" || filter === "instructor") && <AddCommentLink para={p.key} />}
                 <div className={docked ? "space-y-2" : "grid gap-2 sm:grid-cols-2"}>
                   {shownComments.map((c) => (
                     <div key={c.id} data-ann={c.id}>

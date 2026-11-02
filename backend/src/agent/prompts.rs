@@ -1,6 +1,6 @@
 //! Prompt text and the context blocks shared between grading and chat.
 
-use crate::events::Annotation;
+use crate::events::{Annotation, CommentAuthor};
 use crate::llm::truncate;
 use crate::session::Session;
 
@@ -79,6 +79,21 @@ question, no closing offers of further help. Use Markdown only when it helps.\n"
             out.push_str(&format!("- {}: {:.1}/{:.1}\n", c.name, c.score, c.max));
         }
     }
+    let instructor: Vec<String> = s
+        .annotations
+        .iter()
+        .filter_map(|a| match a {
+            Annotation::Comment { para, text, anchor, author: CommentAuthor::Instructor, .. } => {
+                let q = anchor.as_ref().map(|a| format!(" on \"{}\"", truncate(&a.quote, 60))).unwrap_or_default();
+                Some(format!("- [{para}]{q}: {}\n", truncate(text, 300)))
+            }
+            _ => None,
+        })
+        .collect();
+    if !instructor.is_empty() {
+        out.push_str("\nThe teacher's own comments (authoritative; take them into account):\n");
+        out.push_str(&instructor.concat());
+    }
     if !s.fact_checks.is_empty() {
         out.push_str("\nFact checks performed:\n");
         for f in &s.fact_checks {
@@ -120,8 +135,51 @@ pub fn comments_for(s: &Session, key: &str) -> Vec<String> {
     s.annotations
         .iter()
         .filter_map(|a| match a {
-            Annotation::Comment { para, text, .. } if para == key => Some(text.clone()),
+            Annotation::Comment { para, text, author, .. } if para == key => {
+                let who = match author {
+                    CommentAuthor::Instructor => "Instructor",
+                    CommentAuthor::Agent => "Grader",
+                    CommentAuthor::Grammar => "Grammar",
+                    CommentAuthor::FactCheck => "Fact-check",
+                };
+                Some(format!("[{who}] {text}"))
+            }
             _ => None,
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::events::{Anchor, Paragraph};
+
+    #[test]
+    fn agent_sees_instructor_comments_labelled() {
+        let s = Session {
+            paragraphs: vec![Paragraph { key: "P1".into(), index: 0, text: "Cats rule.".into() }],
+            annotations: vec![
+                Annotation::Comment {
+                    id: "i1".into(),
+                    para: "P1".into(),
+                    anchor: Some(Anchor { start: 0, length: 4, quote: "Cats".into() }),
+                    text: "Too informal.".into(),
+                    author: CommentAuthor::Instructor,
+                },
+                Annotation::Comment {
+                    id: "a1".into(),
+                    para: "P1".into(),
+                    anchor: None,
+                    text: "Vague.".into(),
+                    author: CommentAuthor::Agent,
+                },
+            ],
+            ..Default::default()
+        };
+        let sys = chat_system(&s, None, false);
+        assert!(sys.contains("The teacher's own comments"));
+        assert!(sys.contains("- [P1] on \"Cats\": Too informal."));
+        assert!(!sys.contains("Vague."), "model comments are not repeated in the system prompt");
+        assert_eq!(comments_for(&s, "P1"), vec!["[Instructor] Too informal.", "[Grader] Vague."]);
+    }
 }

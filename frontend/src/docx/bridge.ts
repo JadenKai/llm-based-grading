@@ -13,6 +13,8 @@ import { type Located, regionText, toEditorOffset } from "./previews";
 export interface BlockRef {
   key: string;
   blockId: string | null;
+  /** `w14:paraId`, when the document has one. */
+  paraId: string | null;
   text: string;
 }
 
@@ -56,7 +58,7 @@ export function extractParagraphs(editor: Editor): Extracted {
     }
     const key = `P${i + 1}`;
     paragraphs.push({ key, index: i, text: p.text });
-    blocks.set(key, { key, blockId: match?.blockId ?? null, text: p.text });
+    blocks.set(key, { key, blockId: match?.blockId ?? null, paraId: p.paraId ?? null, text: p.text });
   });
   return { paragraphs, blocks };
 }
@@ -95,6 +97,7 @@ export interface HighlightState {
 export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st: HighlightState) {
   const scoreRanges: Range[][] = SCORE_SETS.map(() => []);
   const comments: Range[] = [];
+  const instructor: Range[] = [];
   const fixes: Range[] = [];
   const unpreviewedFixes: Range[] = [];
   const agentPending: Range[] = [];
@@ -115,7 +118,7 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
         break;
       case "comment":
         r = anchorRange(block, a.anchor, a.id, located);
-        if (r && a.anchor) (pending ? agentPending : comments).push(r);
+        if (r && a.anchor) (pending ? agentPending : a.author === "instructor" ? instructor : comments).push(r);
         break;
       case "edit": {
         const l = located?.find((x) => x.edit.id === a.id);
@@ -147,6 +150,8 @@ export function syncHighlights(editor: Editor, blocks: Map<string, BlockRef>, st
   const details = (ranges: Range[]) => (st.showDetails ? ranges : []);
   SCORE_SETS.forEach((name, b) => set(name, scoreRanges[b], scoreColor(b), "grader-score", 0));
   set("comments", details(comments), "oklch(0.86 0.08 250)", "grader-comment", 3);
+  // The teacher's own comments are always shown.
+  set("instructor", instructor, "oklch(0.9 0.005 250)", "grader-instructor", 6);
   // Suggested fixes are always visible: they are the red text in the document.
   set("fixes", fixes, "transparent", "grader-fix", 4);
   set("grammar", unpreviewedFixes, "transparent", "grader-grammar", 4);

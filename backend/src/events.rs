@@ -37,6 +37,8 @@ pub enum CommentAuthor {
     Agent,
     Grammar,
     FactCheck,
+    /// Written by the teacher, not the model.
+    Instructor,
 }
 
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]

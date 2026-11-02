@@ -23,6 +23,10 @@ body {
   border-bottom: 2px solid oklch(0.6 0.13 250);
 }
 
+.docx-text-highlight.grader-instructor {
+  border-bottom: 2px solid #1c1917;
+}
+
 .docx-text-highlight.grader-proposal {
   outline: 1.5px dashed oklch(0.55 0.15 300);
   outline-offset: -1px;

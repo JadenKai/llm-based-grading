@@ -29,7 +29,22 @@ Open **Settings** to configure model providers:
 
 API keys stay on the backend. They are stored in `~/.config/llm-grading/settings.json` with mode 0600 and are never returned to the browser. Sessions are saved in `~/.local/share/llm-grading/sessions/`. You can override these locations with `GRADER_CONFIG_DIR` and `GRADER_DATA_DIR`, and the listen address with `GRADER_ADDR`.
 
-The landing page offers the bundled examples in two dropdowns: essays from `examples/essays/*.docx` and rubrics from `examples/rubrics/*.json` (override the folder with `GRADER_PRESETS_DIR`). See `examples/README.md` for what the grader should find.
+The app opens straight into the workspace: choose an example essay or drop a `.docx` in the left window, and an example rubric or a `.json` rubric in the chat window (any mix of examples and your own files). Both are shown for you to check before you press **Start grading**. Examples come from `examples/essays/*.docx` and `examples/rubrics/*.json` (override the folder with `GRADER_PRESETS_DIR`). See `examples/README.md` for what the grader should find.
+
+## Layout
+
+- **Left window:** *Essay* (the document, with paragraph highlights and inline red fix previews) and *Review* (every comment and suggestion, grouped by paragraph).
+- **Right window:** *Chat*, *Rubric* and *Original Assessment*. Hide or show it with the panel button in the top-right; Export, New essay and Settings are in the `⋯` menu.
+- Click a highlighted paragraph for its details, split into *Grader*, *Fact-checks*, *Spelling & grammar* and *Instructor* tabs.
+
+## Instructor comments
+
+Teachers can add their own comments, kept apart from the model's (which are marked *AI*):
+
+- select text in the essay and press **Comment** (anchored to the selection), or
+- use *+ Add instructor comment* in a paragraph's popup or in the Review tab.
+
+Instructor comments are applied immediately, can be edited or deleted, are always visible in the essay (dark underline), and are passed to the chat agent as the teacher's authoritative notes.
 
 ## Rubric format
 

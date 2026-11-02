@@ -164,3 +164,23 @@ pub async fn put_paragraphs(
     st.store.persist(&arc).await;
     Ok(Json(snap))
 }
+
+/// A bundled example essay, for previewing before a session exists.
+pub async fn preset_essay(Path(file): Path<String>) -> ApiResult<Response> {
+    let bytes = presets::read("essays", &file).ok_or_else(|| AppError::not_found("example essay"))?;
+    Ok(Response::builder()
+        .header(header::CONTENT_TYPE, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        .body(Body::from(bytes))
+        .unwrap())
+}
+
+/// A bundled example rubric, parsed.
+pub async fn preset_rubric(Path(file): Path<String>) -> ApiResult<Json<Rubric>> {
+    let bytes = presets::read("rubrics", &file).ok_or_else(|| AppError::not_found("example rubric"))?;
+    Ok(Json(Rubric::parse(&bytes).map_err(AppError::bad_request)?))
+}
+
+/// Validate an uploaded rubric and return it parsed, so it can be previewed before grading.
+pub async fn parse_rubric(body: axum::body::Bytes) -> ApiResult<Json<Rubric>> {
+    Ok(Json(Rubric::parse(&body).map_err(AppError::bad_request)?))
+}

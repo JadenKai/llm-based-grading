@@ -4,7 +4,7 @@ import { Markdown } from "./Markdown";
 
 const pts = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
-function Structured({ rubric }: { rubric: Rubric }) {
+export function RubricDetails({ rubric }: { rubric: Rubric }) {
   const total = rubric.criteria.reduce((a, c) => a + c.points, 0);
   return (
     <div className="space-y-6">
@@ -57,7 +57,7 @@ export function RubricView() {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl px-6 py-6">
         {session.rubric ? (
-          <Structured rubric={session.rubric} />
+          <RubricDetails rubric={session.rubric} />
         ) : (
           <Markdown className="text-sm text-stone-800">{session.rubricMd}</Markdown>
         )}

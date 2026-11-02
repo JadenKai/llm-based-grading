@@ -8,10 +8,14 @@ import type { SessionSnapshot } from "../api/gen/SessionSnapshot";
 import type { ThinkSetting } from "../api/gen/ThinkSetting";
 import { type AppData, applyEvent, emptyData, replay, sessionFromSnapshot } from "./applyEvent";
 
-export type Tab = "essay" | "rubric" | "assessment" | "review";
+/** Left window. */
+export type Tab = "essay" | "review";
+/** Right window. */
+export type RightTab = "chat" | "rubric" | "assessment";
 
 interface AppStore extends AppData {
   tab: Tab;
+  rightTab: RightTab;
   /** Paragraph key under focus (clicked in the essay, a comment, or a chat reference). */
   focusPara: string | null;
   focusAnnotation: string | null;
@@ -21,6 +25,7 @@ interface AppStore extends AppData {
   applyDecision: (resp: DecisionResp) => void;
   echoUser: (text: string) => void;
   setTab: (tab: Tab) => void;
+  setRightTab: (tab: RightTab) => void;
   focus: (para: string | null, annotation?: string | null) => void;
 }
 
@@ -28,6 +33,7 @@ export const useApp = create<AppStore>()(
   immer((set) => ({
     ...emptyData(),
     tab: "essay",
+    rightTab: "chat",
     focusPara: null,
     focusAnnotation: null,
     loadSession: (snap) =>
@@ -41,6 +47,7 @@ export const useApp = create<AppStore>()(
       set((d) => {
         Object.assign(d, emptyData());
         d.tab = "essay";
+        d.rightTab = "chat";
         d.focusPara = null;
       }),
     apply: (env) => set((d) => applyEvent(d, env)),
@@ -56,6 +63,7 @@ export const useApp = create<AppStore>()(
         d.items.push({ kind: "user", id: `local_${Date.now()}`, text });
       }),
     setTab: (tab) => set({ tab }),
+    setRightTab: (rightTab) => set({ rightTab }),
     focus: (para, annotation = null) => set({ focusPara: para, focusAnnotation: annotation }),
   })),
 );
@@ -64,8 +72,11 @@ export const useApp = create<AppStore>()(
 interface PrefsStore {
   model: ModelRef | null;
   think: ThinkSetting | null;
+  /** Right window (chat, rubric, assessment) shown. */
+  chatOpen: boolean;
   setModel: (m: ModelRef) => void;
   setThink: (t: ThinkSetting | null) => void;
+  setChatOpen: (open: boolean) => void;
 }
 
 export const usePrefs = create<PrefsStore>()(
@@ -73,8 +84,10 @@ export const usePrefs = create<PrefsStore>()(
     (set) => ({
       model: null,
       think: null,
+      chatOpen: true,
       setModel: (model) => set({ model }),
       setThink: (think) => set({ think }),
+      setChatOpen: (chatOpen) => set({ chatOpen }),
     }),
     { name: "grader-prefs" },
   ),

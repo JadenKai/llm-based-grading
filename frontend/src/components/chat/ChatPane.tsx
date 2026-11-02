@@ -129,8 +129,9 @@ function Composer() {
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
+    // Grow with the text; an empty box stays one line (measuring during panel layout can overshoot).
     ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
+    if (text) ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   }, [text]);
 
   const canSend = !!session && !!model && !running && text.trim().length > 0;

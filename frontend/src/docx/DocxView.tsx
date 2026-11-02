@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import type { Paragraph } from "../api/gen/Paragraph";
 import type { Proposal } from "../api/gen/Proposal";
 import { DetailsPopover, type PopoverState } from "../components/annotations/DetailsPopover";
+import { addInstructorComment, CommentComposer } from "../components/annotations/InstructorComments";
 import { useApp } from "../stores/app";
 import { annotationsAt, extractParagraphs, type BlockRef, type Hit, scrollTo, syncHighlights } from "./bridge";
 import { scoreLabel } from "./colors";
@@ -77,6 +78,30 @@ export async function saveClean(editor: Editor): Promise<ArrayBuffer> {
   }
 }
 
+function selectedText(editor: Editor): string {
+  try {
+    return (editor.query({ type: "selectedText" }) ?? "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Paragraph key holding the current selection (by paraId, else by the selected text). */
+function paragraphOfSelection(editor: Editor, quote: string): string | null {
+  const blocks = useEditorStore.getState().blocks;
+  try {
+    const sel = editor.query({ type: "selection" });
+    const from = sel?.from as { paraId?: string } | undefined;
+    if (from?.paraId) {
+      for (const b of blocks.values()) if (b.paraId === from.paraId) return b.key;
+    }
+  } catch {
+    /* fall through */
+  }
+  for (const b of blocks.values()) if (b.text.includes(quote)) return b.key;
+  return null;
+}
+
 /** One-line description of what is under the pointer. */
 function brief(hits: Hit[]): { title: string; detail: string } | null {
   const s = useApp.getState().session;
@@ -95,7 +120,7 @@ function brief(hits: Hit[]): { title: string; detail: string } | null {
     score?.kind === "score" ? `${para} · ${Math.round(score.score * 100)} · ${scoreLabel(score.score)}` : para;
   const cut = (t: string, n = 90) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
   let detail = counts;
-  if (specific?.kind === "comment") detail = cut(specific.text);
+  if (specific?.kind === "comment") detail = `${specific.author === "instructor" ? "Instructor: " : ""}${cut(specific.text)}`;
   if (specific?.kind === "edit") detail = `Fix: “${cut(specific.anchor.quote, 30)}” → “${cut(specific.replacement, 30)}”`;
   return { title: head, detail: detail || "No comments" };
 }
@@ -121,6 +146,7 @@ export function DocxView({
   const tab = useApp((s) => s.tab);
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [tip, setTip] = useState<{ x: number; y: number; title: string; detail: string } | null>(null);
+  const [selection, setSelection] = useState<{ x: number; y: number; para: string; quote: string; composing: boolean } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const onParagraphsRef = useRef(onParagraphs);
   onParagraphsRef.current = onParagraphs;
@@ -229,6 +255,7 @@ export function DocxView({
   const onClickCapture = (e: React.MouseEvent) => {
     const box = wrapRef.current?.getBoundingClientRect();
     if (!editor || !box) return;
+    if (selectedText(editor)) return;
     const hits = hitsAt(e.clientX, e.clientY);
     if (!hits.length) {
       closePopover();
@@ -243,11 +270,28 @@ export function DocxView({
     setPopover({
       para: hits[0].para,
       focusId: specific?.annId ?? null,
-      left: Math.max(8, Math.min(e.clientX - box.left - 40, box.width - 340)),
+      left: Math.max(8, Math.min(e.clientX - box.left - 40, box.width - 424)),
       top: above ? anchor.top - box.top - 6 : below,
       above,
     });
     useApp.setState({ focusAnnotation: specific?.annId ?? null });
+  };
+
+  // Selecting text offers an instructor comment on it.
+  const onMouseUp = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    // Let the editor settle the selection first.
+    setTimeout(() => {
+      const box = wrapRef.current?.getBoundingClientRect();
+      const quote = editor ? selectedText(editor) : "";
+      const para = editor && quote ? paragraphOfSelection(editor, quote) : null;
+      if (!box || !quote || !para) {
+        setSelection((s) => (s?.composing ? s : null));
+        return;
+      }
+      setTip(null);
+      setSelection({ x: clientX - box.left, y: clientY - box.top, para, quote, composing: false });
+    }, 0);
   };
 
   // Hovering shows a one-line summary.
@@ -270,6 +314,7 @@ export function DocxView({
         className="h-full"
         onClickCapture={onClickCapture}
         onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
         onMouseLeave={() => setTip(null)}
         onWheelCapture={() => {
           setTip(null);
@@ -298,6 +343,36 @@ export function DocxView({
         </div>
       )}
       {popover && <DetailsPopover state={popover} onClose={closePopover} />}
+      {selection && !popover && (
+        <div
+          className="absolute z-30"
+          style={{ left: Math.max(8, Math.min(selection.x - 20, (wrapRef.current?.clientWidth ?? 9999) - 300)), top: selection.y + 14 }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onMouseUp={(e) => e.stopPropagation()}
+        >
+          {selection.composing ? (
+            <div className="w-72 rounded-lg border border-stone-200 bg-white p-3 shadow-lg">
+              <p className="mb-1.5 text-[11px] font-semibold text-stone-900">Instructor comment · {selection.para}</p>
+              <CommentComposer
+                quote={selection.quote.length > 120 ? `${selection.quote.slice(0, 119)}…` : selection.quote}
+                onSubmit={async (text) => {
+                  await addInstructorComment(selection.para, text, selection.quote);
+                  setSelection(null);
+                }}
+                onCancel={() => setSelection(null)}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSelection({ ...selection, composing: true })}
+              className="rounded-md bg-stone-900 px-2.5 py-1 text-xs font-medium text-white shadow-lg hover:bg-stone-700"
+            >
+              Comment
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

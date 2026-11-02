@@ -10,6 +10,8 @@ import type { DecisionReq } from "./gen/DecisionReq";
 import type { DecisionResp } from "./gen/DecisionResp";
 import type { ThinkSetting } from "./gen/ThinkSetting";
 import type { Presets } from "./gen/Presets";
+import type { Rubric } from "./gen/Rubric";
+import type { NewComment } from "./gen/NewComment";
 
 export type Envelope = { seq: number; run_id: string } & Event;
 
@@ -56,6 +58,20 @@ export const api = {
 
   listSessions: () => request<SessionSummary[]>("/api/sessions"),
   presets: () => request<Presets>("/api/presets"),
+  presetEssay: async (file: string) => {
+    const res = await fetch(`/api/presets/essays/${encodeURIComponent(file)}`);
+    if (!res.ok) throw new ApiError(res.status, "could not load the example essay");
+    return new Uint8Array(await res.arrayBuffer());
+  },
+  presetRubric: (file: string) => request<Rubric>(`/api/presets/rubrics/${encodeURIComponent(file)}`),
+  /** Validate an uploaded rubric on the server and get it back parsed. */
+  parseRubric: (file: File) =>
+    request<Rubric>("/api/rubrics/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: file }),
+  addComment: (id: string, c: NewComment) => request<DecisionResp>(`/api/sessions/${id}/comments`, json("POST", c)),
+  editComment: (id: string, annId: string, text: string) =>
+    request<DecisionResp>(`/api/sessions/${id}/comments/${annId}`, json("PUT", { text })),
+  deleteComment: (id: string, annId: string) =>
+    request<DecisionResp>(`/api/sessions/${id}/comments/${annId}`, { method: "DELETE" }),
   /** Each source is an uploaded file or the id of a bundled example. */
   createSession: (essay: Source, rubric: Source) => {
     const fd = new FormData();

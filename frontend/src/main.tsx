@@ -6,7 +6,7 @@ import "@docx-editor.dev/core/styles/editor.css";
 import "./index.css";
 import { GradePage } from "./pages/GradePage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { UploadPage } from "./pages/UploadPage";
+import { NewSessionPage } from "./pages/NewSessionPage";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
@@ -17,7 +17,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<UploadPage />} />
+          <Route path="/" element={<NewSessionPage />} />
           <Route path="/grade/:id" element={<GradePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
