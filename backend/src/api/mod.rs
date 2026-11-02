@@ -1,4 +1,5 @@
 mod comments;
+mod overrides;
 mod proposals;
 mod runs;
 mod sessions;
@@ -65,6 +66,7 @@ pub fn router(state: Shared) -> Router {
         .route("/api/sessions/{id}/runs/{run_id}/cancel", post(runs::cancel))
         .route("/api/sessions/{id}/proposals/{pid}", post(proposals::decide))
         .route("/api/sessions/{id}/comments", post(comments::add))
+        .route("/api/sessions/{id}/overrides", put(overrides::set))
         .route("/api/sessions/{id}/comments/{ann_id}", put(comments::update).delete(comments::delete))
         .layer(DefaultBodyLimit::max(25 * 1024 * 1024))
         .with_state(state)

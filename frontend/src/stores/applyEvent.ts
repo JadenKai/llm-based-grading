@@ -5,6 +5,7 @@ import type { ModelRef } from "../api/gen/ModelRef";
 import type { Paragraph } from "../api/gen/Paragraph";
 import type { Proposal } from "../api/gen/Proposal";
 import type { Rubric } from "../api/gen/Rubric";
+import type { ScoreOverride } from "../api/gen/ScoreOverride";
 import type { RunKind } from "../api/gen/RunKind";
 import type { SessionSnapshot } from "../api/gen/SessionSnapshot";
 import type { StepKind } from "../api/gen/StepKind";
@@ -61,6 +62,8 @@ export interface SessionData {
   proposals: Proposal[];
   thesis: string | null;
   assessment: Assessment | null;
+  /** The instructor's score overrides (the original assessment itself stays frozen). */
+  overrides: ScoreOverride[];
   graded: boolean;
   model: ModelRef | null;
 }
@@ -87,6 +90,7 @@ export function sessionFromSnapshot(s: SessionSnapshot): SessionData {
     proposals: s.proposals,
     thesis: s.thesis,
     assessment: s.original_assessment,
+    overrides: s.score_overrides,
     graded: s.graded,
     model: s.model,
   };

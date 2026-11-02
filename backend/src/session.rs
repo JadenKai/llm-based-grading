@@ -51,6 +51,8 @@ pub struct Session {
     pub criteria: Vec<RubricCriterion>,
     pub fact_checks: Vec<FactCheck>,
     pub original_assessment: Option<Assessment>,
+    /// The instructor's score overrides, layered over the frozen original assessment.
+    pub score_overrides: Vec<ScoreOverride>,
     pub graded: bool,
     pub model: Option<ModelRef>,
     pub history: Vec<ChatMessage>,
@@ -58,6 +60,16 @@ pub struct Session {
     pub review_log: Vec<String>,
     pub active_run: Option<String>,
     pub next_id: u64,
+}
+
+/// An instructor's score for one rubric criterion, replacing the model's.
+#[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq)]
+#[ts(export)]
+pub struct ScoreOverride {
+    pub criterion: String,
+    pub score: f32,
+    pub note: Option<String>,
+    pub updated_at: String,
 }
 
 #[derive(Serialize, TS, Clone, Debug)]
@@ -77,6 +89,8 @@ pub struct SessionSnapshot {
     pub criteria: Vec<RubricCriterion>,
     pub fact_checks: Vec<FactCheck>,
     pub original_assessment: Option<Assessment>,
+    /// The instructor's score overrides, layered over the frozen original assessment.
+    pub score_overrides: Vec<ScoreOverride>,
     pub graded: bool,
     pub model: Option<ModelRef>,
     /// Every event of finished runs, for replaying the chat.
@@ -116,6 +130,7 @@ impl Session {
             criteria: self.criteria.clone(),
             fact_checks: self.fact_checks.clone(),
             original_assessment: self.original_assessment.clone(),
+            score_overrides: self.score_overrides.clone(),
             graded: self.graded,
             model: self.model.clone(),
             transcript: self.transcript.iter().filter_map(|e| serde_json::to_value(e).ok()).collect(),
@@ -129,9 +144,20 @@ impl Session {
             created_at: self.created_at.clone(),
             essay_name: self.essay_name.clone(),
             graded: self.graded,
-            overall: self.original_assessment.as_ref().map(|a| a.overall),
+            overall: self.final_score(),
             max: self.original_assessment.as_ref().map(|a| a.max),
         }
+    }
+
+    /// The essay's score with the instructor's overrides applied.
+    pub fn final_score(&self) -> Option<f32> {
+        let a = self.original_assessment.as_ref()?;
+        Some(
+            a.criteria
+                .iter()
+                .map(|c| self.score_overrides.iter().find(|o| o.criterion == c.name).map_or(c.score, |o| o.score))
+                .sum(),
+        )
     }
 
     pub fn paragraph(&self, key: &str) -> Option<&Paragraph> {

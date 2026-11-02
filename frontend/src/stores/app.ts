@@ -5,6 +5,7 @@ import type { Envelope } from "../api/client";
 import type { DecisionResp } from "../api/gen/DecisionResp";
 import type { ModelRef } from "../api/gen/ModelRef";
 import type { SessionSnapshot } from "../api/gen/SessionSnapshot";
+import type { ScoreOverride } from "../api/gen/ScoreOverride";
 import type { ThinkSetting } from "../api/gen/ThinkSetting";
 import { type AppData, applyEvent, emptyData, replay, sessionFromSnapshot } from "./applyEvent";
 
@@ -24,6 +25,7 @@ interface AppStore extends AppData {
   apply: (env: Envelope) => void;
   applyDecision: (resp: DecisionResp) => void;
   echoUser: (text: string) => void;
+  setOverrides: (overrides: ScoreOverride[]) => void;
   setTab: (tab: Tab) => void;
   setRightTab: (tab: RightTab) => void;
   focus: (para: string | null, annotation?: string | null) => void;
@@ -61,6 +63,10 @@ export const useApp = create<AppStore>()(
     echoUser: (text) =>
       set((d) => {
         d.items.push({ kind: "user", id: `local_${Date.now()}`, text });
+      }),
+    setOverrides: (overrides) =>
+      set((d) => {
+        if (d.session) d.session.overrides = overrides;
       }),
     setTab: (tab) => set({ tab }),
     setRightTab: (rightTab) => set({ rightTab }),

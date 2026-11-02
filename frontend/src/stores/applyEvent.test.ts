@@ -17,6 +17,7 @@ const session = (): AppData["session"] => ({
   proposals: [],
   thesis: null,
   assessment: null,
+  overrides: [],
   graded: false,
   model: null,
 });

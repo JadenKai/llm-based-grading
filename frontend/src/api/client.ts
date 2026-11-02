@@ -12,6 +12,8 @@ import type { ThinkSetting } from "./gen/ThinkSetting";
 import type { Presets } from "./gen/Presets";
 import type { Rubric } from "./gen/Rubric";
 import type { NewComment } from "./gen/NewComment";
+import type { OverrideReq } from "./gen/OverrideReq";
+import type { ScoreOverride } from "./gen/ScoreOverride";
 
 export type Envelope = { seq: number; run_id: string } & Event;
 
@@ -67,6 +69,9 @@ export const api = {
   /** Validate an uploaded rubric on the server and get it back parsed. */
   parseRubric: (file: File) =>
     request<Rubric>("/api/rubrics/parse", { method: "POST", headers: { "Content-Type": "application/json" }, body: file }),
+  /** Set (score) or clear (score: null) the instructor's override for one criterion. */
+  setOverride: (id: string, req: OverrideReq) =>
+    request<ScoreOverride[]>(`/api/sessions/${id}/overrides`, json("PUT", req)),
   addComment: (id: string, c: NewComment) => request<DecisionResp>(`/api/sessions/${id}/comments`, json("POST", c)),
   editComment: (id: string, annId: string, text: string) =>
     request<DecisionResp>(`/api/sessions/${id}/comments/${annId}`, json("PUT", { text })),

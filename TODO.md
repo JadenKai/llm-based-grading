@@ -1,9 +1,1 @@
-- [x] Add a way to hide and show the chat (a toggle button)
-- [x] Now the page is two windows: the essay and the chat. Currently, tabs are only over the essay and changing that page. Make it so Essay and Review are tabs that change the left-most window, and move Rubric and Original Assessment and Chat as tabs to change the right window.
-- [x] Make the Export, New, and Settings buttons into a single dropdown to save space
-- [x] Instead of the landing page where you select the essays from a dropdown, start the app from the main editing/chat page. Where the essay goes include a place to select a default essay or drag-and-drop upload one, and on the chat section implement a similar thing but for rubrics. The user should be able to choose a preset for both, a custom for both, or match between custom and default.
-- [x] Once both the essay and the rubric have been given, display them to the user to that the user can look over them and make sure that both are correct and the ones that are to be used.
-- [x] On the popup when clicking a graded paragraph, make the popup have tabs that switch between grader comments, fact-checks, and spelling/grammar mistakes.
-- [x] In addition to grader comments, fact-checks, and spelling/grammar mistakes, which are all LLM or algorithmic, this project needs instructor comments, displayed seperately and with distiction from LLM comments, and a way for instructors to add those comments. 
-- [ ] Allow the instructor to override scores for the essay in the final assessment
 - [ ] (DO NOT DO YET)For the left and right window, add a way to have two tabs in open at the same time (the essay and the review on the left with the chat on the right, or the essay q)

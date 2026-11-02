@@ -76,7 +76,21 @@ question, no closing offers of further help. Use Markdown only when it helps.\n"
     if let Some(a) = &s.original_assessment {
         out.push_str(&format!("\nOriginal assessment: {:.1}/{:.1}. {}\n", a.overall, a.max, truncate(&a.summary, 800)));
         for c in &a.criteria {
-            out.push_str(&format!("- {}: {:.1}/{:.1}\n", c.name, c.score, c.max));
+            out.push_str(&format!("- {}: {:.1}/{:.1}", c.name, c.score, c.max));
+            if let Some(o) = s.score_overrides.iter().find(|o| o.criterion == c.name) {
+                let note = o.note.as_deref().map(|n| format!(" — \"{}\"", truncate(n, 200))).unwrap_or_default();
+                out.push_str(&format!(" → overridden by the teacher to {:.1}/{:.1}{note}", o.score, c.max));
+            }
+            out.push('\n');
+        }
+        if !s.score_overrides.is_empty()
+            && let Some(f) = s.final_score()
+        {
+            out.push_str(&format!(
+                "Final score after the teacher's overrides: {f:.1}/{:.1}. The teacher's scores are final; do not argue \
+for the original ones.\n",
+                a.max
+            ));
         }
     }
     let instructor: Vec<String> = s
@@ -181,5 +195,48 @@ mod tests {
         assert!(sys.contains("- [P1] on \"Cats\": Too informal."));
         assert!(!sys.contains("Vague."), "model comments are not repeated in the system prompt");
         assert_eq!(comments_for(&s, "P1"), vec!["[Instructor] Too informal.", "[Grader] Vague."]);
+    }
+
+    #[test]
+    fn overrides_change_the_final_score_and_reach_the_agent() {
+        use crate::events::{Assessment, CriterionScore, ModelRef};
+        use crate::session::ScoreOverride;
+        let crit = |name: &str, score: f32, max: f32| CriterionScore {
+            name: name.into(),
+            score,
+            max,
+            justification: String::new(),
+            evidence: vec![],
+        };
+        let mut s = Session {
+            original_assessment: Some(Assessment {
+                thesis: "T".into(),
+                overall: 7.0,
+                max: 10.0,
+                summary: "S".into(),
+                strengths: vec![],
+                improvements: vec![],
+                criteria: vec![crit("Thesis", 4.0, 5.0), crit("Evidence", 3.0, 5.0)],
+                model: ModelRef { provider_id: "p".into(), model: "m".into() },
+                created_at: String::new(),
+            }),
+            ..Default::default()
+        };
+        assert_eq!(s.final_score(), Some(7.0));
+        s.score_overrides.push(ScoreOverride {
+            criterion: "Evidence".into(),
+            score: 4.5,
+            note: Some("Sources are fine.".into()),
+            updated_at: String::new(),
+        });
+        assert_eq!(s.final_score(), Some(8.5));
+        let sys = chat_system(&s, None, false);
+        assert!(
+            sys.contains("- Evidence: 3.0/5.0 → overridden by the teacher to 4.5/5.0 — \"Sources are fine.\""),
+            "{sys}"
+        );
+        assert!(sys.contains("Final score after the teacher's overrides: 8.5/10.0"));
+        // The original assessment itself is untouched.
+        assert_eq!(s.original_assessment.as_ref().unwrap().overall, 7.0);
     }
 }

@@ -46,6 +46,10 @@ Teachers can add their own comments, kept apart from the model's (which are mark
 
 Instructor comments are applied immediately, can be edited or deleted, are always visible in the essay (dark underline), and are passed to the chat agent as the teacher's authoritative notes.
 
+## Score overrides
+
+In **Original Assessment**, press **Override** on any criterion to set your own score (0 to the criterion's maximum) with an optional reason. The final score becomes the sum of your overrides and the AI's remaining scores; it is marked *Adjusted by instructor*, and the AI's original score stays on record next to it (and as a tick on each bar). **Reset to AI score** removes an override. Overrides are saved with the session, shown in the Recent list's score, and passed to the chat agent as final.
+
 ## Rubric format
 
 Rubrics are JSON. Only `title`, `criteria[].name` and `criteria[].points` are required:
