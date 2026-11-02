@@ -5,4 +5,5 @@
 - [x] Once both the essay and the rubric have been given, display them to the user to that the user can look over them and make sure that both are correct and the ones that are to be used.
 - [x] On the popup when clicking a graded paragraph, make the popup have tabs that switch between grader comments, fact-checks, and spelling/grammar mistakes.
 - [x] In addition to grader comments, fact-checks, and spelling/grammar mistakes, which are all LLM or algorithmic, this project needs instructor comments, displayed seperately and with distiction from LLM comments, and a way for instructors to add those comments. 
+- [ ] Allow the instructor to override scores for the essay in the final assessment
 - [ ] (DO NOT DO YET)For the left and right window, add a way to have two tabs in open at the same time (the essay and the review on the left with the chat on the right, or the essay q)
